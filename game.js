@@ -737,6 +737,22 @@
   const BASIC_ATTACK_COOLDOWN_MS = 3000;
   const BASIC_ATTACK_DAMAGE = 10;
 
+  // 캐릭터 선택 화면 소개용 평타 정보 (이름 / 설명)
+  const BASIC_ATTACK_INFO = {
+    aiden: { name: '뇌격', desc: '반경 100 내 가장 가까운 적 방향으로 검을 휘두릅니다. (쿨다운 3초, 강화 불가)' },
+    celine: { name: '콩알탄', desc: '반경 200 내 가장 가까운 적 방향으로 투사체를 발사합니다. (쿨다운 3초, 강화 불가)' },
+    jackie: { name: '휘두르기', desc: '반경 100 내 가장 가까운 적 방향으로 검을 휘두릅니다. (쿨다운 3초, 강화 불가)' },
+    aya: { name: '위협 사격', desc: '반경 200 내 가장 가까운 적 방향으로 투사체를 발사합니다. (쿨다운 3초, 강화 불가)' },
+  };
+
+  // 지정 반경 내 가장 가까운 적 방향, 없으면 랜덤 방향을 반환 (평타는 항상 발동됨)
+  function dirToNearestOrRandom(radius) {
+    const aim = dirToNearestInRadius(radius);
+    if (aim) return aim;
+    const ang = rand(0, Math.PI * 2);
+    return { x: Math.cos(ang), y: Math.sin(ang), target: null };
+  }
+
   function updateBasicAttack(dt) {
     player.basicAttackTimer -= dt * 1000;
     if (player.basicAttackTimer <= 0) {
@@ -752,10 +768,9 @@
     else if (selectedCharacter === 'aya') projectileBasicAttack(200, CHARACTERS.aya.color);
   }
 
-  // 에이든(뇌격) / 재키(휘두르기): 반경 내 가장 가까운 적 방향으로 검을 휘두름
+  // 에이든(뇌격) / 재키(휘두르기): 반경 내 가장 가까운 적 방향(없으면 랜덤 방향)으로 검을 휘두름
   function meleeBasicAttack(radius, coneDeg, color) {
-    const aim = dirToNearestInRadius(radius);
-    if (!aim) return;
+    const aim = dirToNearestOrRandom(radius);
     const coneRad = (coneDeg * Math.PI) / 180;
     const angleToEdge = Math.cos(coneRad / 2);
     for (const e of enemies) {
@@ -769,10 +784,9 @@
     arcFlashes.push({ x: player.x, y: player.y, dir: { x: aim.x, y: aim.y }, timer: 0.15, maxTimer: 0.15, color, coneRad, range: radius });
   }
 
-  // 셀린(콩알탄) / 아야(위협 사격): 반경 내 가장 가까운 적 방향으로 투사체 발사
+  // 셀린(콩알탄) / 아야(위협 사격): 반경 내 가장 가까운 적 방향(없으면 랜덤 방향)으로 투사체 발사
   function projectileBasicAttack(radius, color) {
-    const aim = dirToNearestInRadius(radius);
-    if (!aim) return;
+    const aim = dirToNearestOrRandom(radius);
     projectiles.push({
       type: 'bolt',
       x: player.x, y: player.y,
@@ -2516,6 +2530,16 @@
       return;
     }
     let html = `<div class="sp-name">${c.name}의 고유 스킬</div>`;
+    const basic = BASIC_ATTACK_INFO[key];
+    if (basic) {
+      html += `<div class="sp-skill">
+        <div class="sp-slot" style="background:${c.color}">평타</div>
+        <div class="sp-text">
+          <span class="sp-title">${basic.name}</span><span class="sp-unlock">상시 사용</span>
+          <div class="sp-desc">${basic.desc}</div>
+        </div>
+      </div>`;
+    }
     for (const skillKey in c.skills) {
       const s = c.skills[skillKey];
       html += `<div class="sp-skill">
