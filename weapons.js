@@ -1,6 +1,6 @@
 // 공용 스킬(무기)과 능력치 강화 데이터
 
-export const WEAPON_DEFS = {
+const WEAPON_DEFS = {
     missile: {
       name: '리펄서 미사일',
       desc: '가장 가까운 적을 추적합니다.',
@@ -63,7 +63,7 @@ export const WEAPON_DEFS = {
     },
   };
 
-export const STAT_DEFS = {
+const STAT_DEFS = {
     speed: {
       title: '헤르메스의 부츠',
       desc: '이동 속도 +10%',

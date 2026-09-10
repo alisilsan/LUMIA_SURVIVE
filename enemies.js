@@ -1,6 +1,6 @@
 // 일반 몬스터 / 보스 데이터 및 픽셀 스프라이트
 
-export const ENEMY_DEFS = {
+const ENEMY_DEFS = {
     wolf:      { hp: 18, dmg: 6, speed: 92, radius: 14, color: '#6b6f76', xp: 3 },   // 일반 잡몹 (중간)
     bear:      { hp: 55, dmg: 10, speed: 55, radius: 21, color: '#8a5a2b', xp: 6 },  // 느리지만 체력 많음
     chicken:   { hp: 10, dmg: 4, speed: 150, radius: 11, color: '#f5f5f0', xp: 2 },  // 빠르지만 약함
@@ -8,7 +8,7 @@ export const ENEMY_DEFS = {
   };
 
 // 8x8 픽셀아트 패턴 ('0' = 투명, 그 외 숫자는 팔레트 색상 키)
-export const ENEMY_SPRITES = {
+const ENEMY_SPRITES = {
     bear: {
       pattern: [
         ['0','1','0','0','0','0','1','0'],
@@ -64,8 +64,8 @@ export const ENEMY_SPRITES = {
   };
 
 // ---------- 보스 5종 (10 / 20 / 30 / 40 / 50 레벨마다 등장, 이후 순환) ----------
-export const BOSS_ORDER = ['mutantBear', 'alpha', 'omega', 'gamma', 'weakline'];
-export const BOSS_NAMES = {
+const BOSS_ORDER = ['mutantBear', 'alpha', 'omega', 'gamma', 'weakline'];
+const BOSS_NAMES = {
     mutantBear: '변이 곰',
     alpha: '알파',
     omega: '오메가',
@@ -74,7 +74,7 @@ export const BOSS_NAMES = {
   };
 
   // 후드 쓴 인간형 실루엣(알파/오메가 공용 패턴, 팔레트만 다름)
-export const SPECTER_PATTERN = [
+const SPECTER_PATTERN = [
     ['0','0','0','1','1','1','1','1','1','0','0','0'],
     ['0','0','1','2','2','1','1','2','2','1','0','0'],
     ['0','1','2','2','2','2','2','2','2','2','1','0'],
@@ -89,7 +89,7 @@ export const SPECTER_PATTERN = [
     ['0','2','2','0','0','1','1','0','0','2','2','0'],
   ];
 
-export const BOSS_SPRITES = {
+const BOSS_SPRITES = {
     mutantBear: {
       pattern: [
         ['0','1','1','0','0','0','0','0','0','1','1','0'],

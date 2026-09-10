@@ -1,9 +1,8 @@
-// ES 모듈은 기본적으로 strict mode로 동작합니다.
-import { WORLD_MIN, WORLD_MAX, SURVIVAL_TARGET, FINAL_BOSS_LEVEL, MAX_ENEMIES, CONSUMABLE_DROP_CHANCE, JOY_RADIUS } from './config.js';
-import { WEAPON_DEFS, STAT_DEFS } from './data/weapons.js';
-import { CHARACTERS, PLAYER_BASE_PATTERN, PLAYER_SPRITES } from './data/characters.js';
-import { ENEMY_DEFS, ENEMY_SPRITES, BOSS_ORDER, BOSS_NAMES, BOSS_SPRITES } from './data/enemies.js';
-import { CONSUMABLE_ITEMS } from './data/items.js';
+(function () {
+'use strict';
+
+// 이 파일은 index.html에서 config.js / data/*.js 뒤에 일반 <script>로 로드됩니다.
+// (전역 스코프를 공유하는 클래식 스크립트 방식 — file:// 로 직접 열어도 동작합니다)
 
 
   // ============ 기본 세팅 ============
@@ -2520,3 +2519,6 @@ import { CONSUMABLE_ITEMS } from './data/items.js';
 
   requestAnimationFrame(loop);
 
+
+
+})();

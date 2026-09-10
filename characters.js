@@ -1,6 +1,6 @@
 // 캐릭터 정의(고유 스킬 포함) 및 플레이어 픽셀 스프라이트
 
-export const CHARACTERS = {
+const CHARACTERS = {
     aiden: {
       name: '에이든',
       tagline: '전격의 저격수',
@@ -181,7 +181,7 @@ export const CHARACTERS = {
   };
 
 // ---------- 플레이어 캐릭터 스프라이트 (에이든 / 셀린 / 재키 / 아야 공용 형태, 팔레트만 다름) ----------
-export const PLAYER_BASE_PATTERN = [
+const PLAYER_BASE_PATTERN = [
     ['0','0','3','3','3','3','3','3','3','3','0','0'],
     ['0','3','3','2','2','2','2','2','2','3','3','0'],
     ['0','3','2','2','2','2','2','2','2','2','3','0'],
@@ -196,7 +196,7 @@ export const PLAYER_BASE_PATTERN = [
     ['0','1','1','0','0','0','0','0','0','1','1','0'],
   ];
 
-export const PLAYER_SPRITES = {
+const PLAYER_SPRITES = {
     aiden: {
       pattern: PLAYER_BASE_PATTERN,
       palette: {
