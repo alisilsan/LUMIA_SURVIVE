@@ -485,6 +485,7 @@
       statPicks: { speed: 0, hp: 0, cdr: 0, magnet: 0, guardianSuit: 0, burgundy47: 0, fateDice: 0, yomyeongwol: 0 },
       jackieKillStreak: 0,
       bloodFrenzyUntil: 0,
+      basicAttackTimer: 0,
       uniqueSkills: {},
       weapons: {},
     };
@@ -729,6 +730,60 @@
     }
   }
 
+  // ---- 기본 공격 (모든 캐릭터 공용) ----
+  // 강화 불가, 상태창 UI에 표시하지 않음, 델루리안 타임피스(쿨타임 감소) 적용 안 함. 고정 쿨다운 3초.
+  const BASIC_ATTACK_COOLDOWN_MS = 3000;
+  const BASIC_ATTACK_DAMAGE = 10;
+
+  function updateBasicAttack(dt) {
+    player.basicAttackTimer -= dt * 1000;
+    if (player.basicAttackTimer <= 0) {
+      player.basicAttackTimer += BASIC_ATTACK_COOLDOWN_MS;
+      fireBasicAttack();
+    }
+  }
+
+  function fireBasicAttack() {
+    if (selectedCharacter === 'aiden') meleeBasicAttack(100, 70, CHARACTERS.aiden.color);
+    else if (selectedCharacter === 'celine') projectileBasicAttack(200, CHARACTERS.celine.color);
+    else if (selectedCharacter === 'jackie') meleeBasicAttack(100, 70, CHARACTERS.jackie.color);
+    else if (selectedCharacter === 'aya') projectileBasicAttack(200, CHARACTERS.aya.color);
+  }
+
+  // 에이든(뇌격) / 재키(휘두르기): 반경 내 가장 가까운 적 방향으로 검을 휘두름
+  function meleeBasicAttack(radius, coneDeg, color) {
+    const aim = dirToNearestInRadius(radius);
+    if (!aim) return;
+    const coneRad = (coneDeg * Math.PI) / 180;
+    const angleToEdge = Math.cos(coneRad / 2);
+    for (const e of enemies) {
+      if (e.dead) continue;
+      const dx = e.x - player.x, dy = e.y - player.y;
+      const dist = Math.hypot(dx, dy) || 1;
+      if (dist > radius) continue;
+      const dot = (dx / dist) * aim.x + (dy / dist) * aim.y;
+      if (dot >= angleToEdge) damageEnemy(e, BASIC_ATTACK_DAMAGE);
+    }
+    arcFlashes.push({ x: player.x, y: player.y, dir: { x: aim.x, y: aim.y }, timer: 0.15, maxTimer: 0.15, color, coneRad, range: radius });
+  }
+
+  // 셀린(콩알탄) / 아야(위협 사격): 반경 내 가장 가까운 적 방향으로 투사체 발사
+  function projectileBasicAttack(radius, color) {
+    const aim = dirToNearestInRadius(radius);
+    if (!aim) return;
+    projectiles.push({
+      type: 'bolt',
+      x: player.x, y: player.y,
+      vx: aim.x * 480, vy: aim.y * 480,
+      damage: BASIC_ATTACK_DAMAGE,
+      pierce: 1,
+      radius: 5,
+      life: 1.4,
+      color,
+      hitSet: new Set(),
+    });
+  }
+
   // ---- 상태이상 (슬로우/속박) ----
   function applySlow(e, pct, durationSec, now) {
     e.slowFactor = 1 - pct;
@@ -929,7 +984,9 @@
   function fireJackieTendonCut(stat) {
     const now = performance.now();
     const myColor = CHARACTERS.jackie.color;
-    const dir = getAimDirection();
+    const aim = dirToNearestInRadius(100);
+    if (!aim) return; // 반경 100 내 적이 없으면 발동하지 않음
+    const dir = aim;
     const coneRad = (stat.coneDeg * Math.PI) / 180;
     const range = 140;
     let hitAny = false;
@@ -1039,20 +1096,22 @@
       c.timer -= dt;
       if (c.timer <= 0) {
         c.timer += c.interval;
-        // 발사 시점의 현재 이동 방향을 따라감 (시전 시점에 고정하지 않음)
-        const ang = Math.atan2(player.dir.y, player.dir.x);
-        projectiles.push({
-          type: 'bolt',
-          x: player.x, y: player.y,
-          vx: Math.cos(ang) * 560, vy: Math.sin(ang) * 560,
-          damage: c.damage,
-          pierce: 1,
-          radius: 5,
-          life: 1.2,
-          color: CHARACTERS.aya.color,
-          hitSet: new Set(),
-          onHit: c.slow ? (e) => applySlow(e, 0.3, 3, now) : null,
-        });
+        // 매 발사 시점마다 반경 200 내 가장 가까운 적 방향으로 재조준
+        const aim = dirToNearestInRadius(200);
+        if (aim) {
+          projectiles.push({
+            type: 'bolt',
+            x: player.x, y: player.y,
+            vx: aim.x * 560, vy: aim.y * 560,
+            damage: c.damage,
+            pierce: 1,
+            radius: 5,
+            life: 1.2,
+            color: CHARACTERS.aya.color,
+            hitSet: new Set(),
+            onHit: c.slow ? (e) => applySlow(e, 0.3, 3, now) : null,
+          });
+        }
         c.shotsLeft -= 1;
         if (c.shotsLeft <= 0) w.channel = null;
       }
@@ -1072,6 +1131,21 @@
       if (d < bestDist) { bestDist = d; best = e; }
     }
     return best;
+  }
+
+  // 지정 반경 내에서 가장 가까운 적을 찾아 그 방향(단위 벡터)을 반환. 없으면 null.
+  function dirToNearestInRadius(radius) {
+    let best = null, bestDist = Infinity;
+    const r2 = radius * radius;
+    for (const e of enemies) {
+      if (e.dead) continue;
+      const d = distSq(e, player);
+      if (d <= r2 && d < bestDist) { bestDist = d; best = e; }
+    }
+    if (!best) return null;
+    const dx = best.x - player.x, dy = best.y - player.y;
+    const dist = Math.hypot(dx, dy) || 1;
+    return { x: dx / dist, y: dy / dist, target: best };
   }
 
   // ============ 발사체 업데이트 ============
@@ -2326,6 +2400,7 @@
     updatePlayerEffects(dt);
     updateWeapons(dt, now);
     updateUniqueSkills(dt, now);
+    updateBasicAttack(dt);
     updateProjectiles(dt);
     updateEnemies(dt, now);
     updateEnemyStatuses(dt);
