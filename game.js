@@ -13,8 +13,10 @@
   function resize() {
     W = window.innerWidth;
     H = window.innerHeight;
-    canvas.width = W;
-    canvas.height = H;
+    const dpr = Math.min(window.devicePixelRatio || 1, 2);
+    canvas.width = Math.round(W * dpr);
+    canvas.height = Math.round(H * dpr);
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
   }
   window.addEventListener('resize', resize);
   resize();
@@ -34,6 +36,15 @@
     }
   });
   window.addEventListener('keyup', (e) => { keys[e.key.toLowerCase()] = false; });
+
+  // 창이 포커스를 잃으면 이동 입력을 해제하고 자동으로 일시정지
+  window.addEventListener('blur', () => {
+    Object.keys(keys).forEach((k) => { keys[k] = false; });
+    touchId = null;
+    touchVector = { x: 0, y: 0, mag: 0 };
+    joystickBase.style.display = 'none';
+    if (state === 'playing') togglePause();
+  });
 
   // 마우스 조준 방향 (재키 힘줄 절단 / 아야 고정 사격 등에서 사용, 터치 기기에서는 이동 방향으로 대체)
   let mouseScreenX = null, mouseScreenY = null;
@@ -96,8 +107,11 @@
     return (cooldownTimerMs / 1000).toFixed(1) + 's';
   }
 
+  let lastHudPaint = -1;
   function populateStatusContent() {
     if (!player) return;
+    if (elapsed >= lastHudPaint && elapsed - lastHudPaint < 0.1) return;
+    lastHudPaint = elapsed;
     const charDef = CHARACTERS[selectedCharacter];
     let html = '';
 
@@ -120,12 +134,12 @@
         if (owned) {
           let badge;
           if (def.passive) {
-            const now = performance.now();
+            const now = (elapsed * 1000);
             badge = isJackieFrenzyActive(now) ? '광기!' : '패시브';
           } else {
             badge = formatCooldownBadge(owned.cooldownTimer);
           }
-          html += `<div class="status-icon">
+          html += `<div class="status-icon" title="${def.name}: ${def.desc || ''}">
             <div class="cooldown-badge">${badge}</div>
             <div class="swatch" style="background:${charDef.color}">${skillKey.toUpperCase()}</div>
             <div class="dots">${levelDots(owned.level, 5)}</div>
@@ -143,7 +157,7 @@
       const owned = player.weapons[wid];
       if (owned) {
         const badge = formatCooldownBadge(owned.cooldownTimer);
-        html += `<div class="status-icon">
+        html += `<div class="status-icon" title="${def.name}: ${def.desc || ''}">
           <div class="cooldown-badge">${badge}</div>
           <div class="swatch" style="background:${def.color}"></div>
           <div class="dots">${levelDots(owned.level, 5)}</div>
@@ -337,7 +351,103 @@
     return drawSpriteData(sx, sy, radius, BOSS_SPRITES[bossKey], hitFlash, 2.3);
   }
 
+  function updateCinematicEffects(dt) {
+    for (const f of cinematicEffects) {
+      f.life -= dt;
+      if (f.type === 'fusion' && f.life > 0) {
+        for (const e of enemies) {
+          if (e.dead) continue;
+          const dx = f.x - e.x, dy = f.y - e.y, d = Math.hypot(dx, dy);
+          if (d < f.radius && d > 8) { e.x += dx * dt * 2; e.y += dy * dt * 2; }
+        }
+      }
+      if (f.life <= 0 && f.damage) {
+        explodeAt(f.x, f.y, f.damage, f.radius, f.color, f.type === 'fusion' ? 'converge' : 'burst');
+        spawnHitBurst(f.x, f.y, f.color);
+        if (f.multiHit && player.uniqueSkills.s1) {
+          player.uniqueSkills.s1.pendingRepeat = {
+            remaining: f.multiHit - 1, timer: 0.3,
+            x: f.x, y: f.y, damage: f.damage, radius: f.radius, color: f.color, style: 'burst',
+          };
+        }
+      }
+    }
+    cinematicEffects = cinematicEffects.filter((f) => f.life > 0);
+  }
+
+  function drawCinematicEffects(tx, ty) {
+    for (const f of cinematicEffects) {
+      const p = 1 - f.life / f.maxLife;
+      ctx.save();
+      ctx.strokeStyle = f.color;
+      ctx.fillStyle = f.color;
+      ctx.lineWidth = 2;
+      if (f.type === 'bomb') {
+        const x = tx(f.sx + (f.x - f.sx) * p), y = ty(f.sy + (f.y - f.sy) * p) - Math.sin(p * Math.PI) * 80;
+        ctx.globalAlpha = 0.35;
+        ctx.beginPath();
+        ctx.arc(tx(f.x), ty(f.y), f.radius, 0, Math.PI * 2);
+        ctx.stroke();
+        ctx.globalAlpha = 1;
+        ctx.translate(x, y);
+        ctx.rotate(p * 8);
+        ctx.fillStyle = '#243643';
+        ctx.fillRect(-7, -8, 14, 16);
+        ctx.fillStyle = f.color;
+        ctx.fillRect(-5, -5, 10, 3);
+        ctx.fillStyle = '#effbff';
+        ctx.fillRect(-3, -11, 6, 3);
+      } else if (f.type === 'fusion') {
+        ctx.globalAlpha = 0.6;
+        ctx.beginPath();
+        ctx.arc(tx(f.x), ty(f.y), f.radius, 0, Math.PI * 2);
+        ctx.stroke();
+        for (let i = 0; i < 8; i++) {
+          const a = i * Math.PI / 4 + p * 3, r = f.radius * (1 - p);
+          ctx.beginPath();
+          ctx.arc(tx(f.x) + Math.cos(a) * r, ty(f.y) + Math.sin(a) * r, 3, 0, Math.PI * 2);
+          ctx.fill();
+        }
+      } else {
+        ctx.globalAlpha = 1 - p;
+        ctx.lineWidth = 18 * (1 - p);
+        ctx.beginPath();
+        ctx.moveTo(tx(f.sx), ty(f.sy));
+        ctx.lineTo(tx(f.x), ty(f.y));
+        ctx.stroke();
+      }
+      ctx.restore();
+    }
+  }
+
   function drawBossTelegraph(e, sx, sy, toScreenX, toScreenY) {
+    if (e.telegraph) {
+      const t = e.telegraph;
+      ctx.save();
+      ctx.fillStyle = t.executed ? 'rgba(255,255,255,0.33)' : 'rgba(255,84,99,0.2)';
+      ctx.strokeStyle = '#ff7b88';
+      ctx.lineWidth = 1.5;
+      ctx.translate(t.type === 'zone' ? toScreenX(t.data.x) : sx, t.type === 'zone' ? toScreenY(t.data.y) : sy);
+      if (['laser', 'dash', 'semilaser', 'syringe'].includes(t.type)) ctx.rotate(Math.atan2(t.data.dir.y, t.data.dir.x));
+      ctx.beginPath();
+      if (t.type === 'laser') ctx.rect(0, -24, 1000, 48);
+      else if (t.type === 'dash') ctx.rect(0, -e.radius, 248, e.radius * 2);
+      else if (t.type === 'semilaser') { ctx.arc(0, 0, 150, -Math.PI / 2, Math.PI / 2); ctx.arc(0, 0, 90, Math.PI / 2, -Math.PI / 2, true); ctx.closePath(); }
+      else if (t.type === 'syringe') { for (const a of [-0.32, 0, 0.32]) { ctx.moveTo(0, 0); ctx.lineTo(Math.cos(a) * 800, Math.sin(a) * 800); } }
+      else ctx.arc(0, 0, t.type === 'quake' ? 170 : t.type === 'zone' ? 110 : 85, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.stroke();
+      ctx.restore();
+      if (!t.executed) {
+        ctx.save();
+        ctx.textAlign = 'center';
+        ctx.font = 'bold 11px sans-serif';
+        ctx.fillStyle = '#ffbfbd';
+        const names = { quake: '지면 강타', summon: '변이체 소환', laser: '직선 포격', dash: '돌진', zone: '위험 구역', syringe: '독성 주사', semilaser: '반원 절단' };
+        ctx.fillText((names[t.type] || '공격') + '  ' + Math.max(0, t.timer).toFixed(1) + 's', sx, sy - e.radius - 35);
+        ctx.restore();
+      }
+    }
     if (e.telegraph) {
       const t = e.telegraph;
       const progress = t.executed ? 1 : clamp(1 - t.timer / t.duration, 0, 1);
@@ -455,6 +565,7 @@
   let state = 'start'; // start | playing | paused | levelup | gameover | victory
   let player, enemies, projectiles, xpGems, particles;
   let hazardZones, enemyProjectiles, lightningStrikes, itemDrops, arcFlashes, skillPulses;
+  let cinematicEffects = [];
   let elapsed, kills, spawnTimer, bossLevelsSpawned;
   let shakeTimer = 0, shakeMag = 0;
   let bossAnnounceText = null, bossAnnounceTimer = 0;
@@ -501,7 +612,9 @@
     itemDrops = [];
     arcFlashes = [];
     skillPulses = [];
+    cinematicEffects = [];
     elapsed = 0;
+    lastHudPaint = -1;
     kills = 0;
     spawnTimer = 0;
     bossLevelsSpawned = new Set();
@@ -613,7 +726,7 @@
     const mv = moveVector();
     if (mv.mag > 0.05) {
       player.dir = { x: mv.x, y: mv.y };
-      const frenzyMult = isJackieFrenzyActive(performance.now()) ? 1.2 : 1;
+      const frenzyMult = isJackieFrenzyActive((elapsed * 1000)) ? 1.2 : 1;
       const speed = player.speed * player.speedMult * frenzyMult * mv.mag;
       player.x += mv.x * speed * dt;
       player.y += mv.y * speed * dt;
@@ -898,7 +1011,8 @@
 
   // ---- 에이든 (모든 스킬 이펙트 색상 통일: CHARACTERS.aiden.color) ----
   function fireAidenRailgun(stat) {
-    const now = performance.now();
+    spawnPulse(player.x, player.y, 34, CHARACTERS.aiden.color, 'ring');
+    const now = (elapsed * 1000);
     const myColor = CHARACTERS.aiden.color;
     const nearest = findNearestEnemy();
     const ang = nearest
@@ -919,7 +1033,7 @@
   }
 
   function fireAidenDischarge(stat) {
-    const now = performance.now();
+    const now = (elapsed * 1000);
     const myColor = CHARACTERS.aiden.color;
     for (const e of enemies) {
       if (e.dead) continue;
@@ -950,14 +1064,12 @@
     const target = findNearestEnemy();
     const x = target ? target.x : clamp(player.x + player.dir.x * 150, WORLD_MIN, WORLD_MAX);
     const y = target ? target.y : clamp(player.y + player.dir.y * 150, WORLD_MIN, WORLD_MAX);
-    explodeAt(x, y, stat.damage, stat.radius, CELINE_PLASMA_COLOR, 'burst');
+    cinematicEffects.push({
+      type: 'bomb', x, y, sx: player.x, sy: player.y,
+      radius: stat.radius, color: CELINE_PLASMA_COLOR,
+      life: 0.42, maxLife: 0.42, damage: stat.damage, multiHit: stat.multiHit,
+    });
     spawnHitBurst(x, y, CELINE_PLASMA_COLOR);
-    if (stat.multiHit) {
-      player.uniqueSkills.s1.pendingRepeat = {
-        remaining: stat.multiHit - 1, timer: 0.3,
-        x, y, damage: stat.damage, radius: stat.radius, color: CELINE_PLASMA_COLOR, style: 'burst',
-      };
-    }
   }
 
   function fireCelineBlast(stat) {
@@ -972,6 +1084,9 @@
       }
     }
     spawnPulse(cx, cy, stat.radius, CELINE_BLAST_COLOR, 'ring');
+    const recoil = getAimDirection();
+    player.kx -= recoil.x * 160;
+    player.ky -= recoil.y * 160;
     if (stat.zone) {
       hazardZones.push({
         x: cx, y: cy, radius: stat.radius,
@@ -982,11 +1097,13 @@
   }
 
   function fireCelineFusion(stat) {
-    const ang = rand(0, Math.PI * 2);
-    const dist = rand(0, 380);
-    const x = clamp(player.x + Math.cos(ang) * dist, WORLD_MIN, WORLD_MAX);
-    const y = clamp(player.y + Math.sin(ang) * dist, WORLD_MIN, WORLD_MAX);
-    explodeAt(x, y, stat.damage, stat.radius, CELINE_FUSION_COLOR, 'converge');
+    const pos = pickTargetNearMonster(480, 250);
+    const x = pos.x, y = pos.y;
+    cinematicEffects.push({
+      type: 'fusion', x, y,
+      radius: stat.radius, color: CELINE_FUSION_COLOR,
+      life: 0.65, maxLife: 0.65, damage: stat.damage,
+    });
     if (stat.zone) {
       hazardZones.push({
         x, y, radius: stat.radius,
@@ -998,7 +1115,7 @@
 
   // ---- 재키 ----
   function fireJackieTendonCut(stat) {
-    const now = performance.now();
+    const now = (elapsed * 1000);
     const myColor = CHARACTERS.jackie.color;
     const aim = dirToNearestInRadius(100);
     if (!aim) return; // 반경 100 내 적이 없으면 발동하지 않음
@@ -1025,11 +1142,12 @@
   }
 
   function fireJackieRaiderBreath(stat) {
-    const now = performance.now();
+    const now = (elapsed * 1000);
     const myColor = CHARACTERS.jackie.color;
     const candidates = enemies.filter((e) => !e.dead && Math.hypot(e.x - player.x, e.y - player.y) <= 100);
     if (candidates.length === 0) return;
     const target = candidates[Math.floor(Math.random() * candidates.length)];
+    cinematicEffects.push({ type: 'trail', x: target.x, y: target.y, sx: player.x, sy: player.y, color: myColor, life: 0.35, maxLife: 0.35 });
     player.x = clamp(target.x, WORLD_MIN, WORLD_MAX);
     player.y = clamp(target.y, WORLD_MIN, WORLD_MAX);
     const radius = 130;
@@ -1090,7 +1208,7 @@
   }
 
   function fireAyaFearRound(stat) {
-    const now = performance.now();
+    const now = (elapsed * 1000);
     const myColor = CHARACTERS.aya.color;
     const radius = 180;
     for (const e of enemies) {
@@ -1273,6 +1391,7 @@
   }
 
   function startTelegraph(e, type, duration) {
+    duration = Math.max(duration, 0.85);
     const dx = player.x - e.x, dy = player.y - e.y;
     const d = Math.hypot(dx, dy) || 1;
     const dir = { x: dx / d, y: dy / d };
@@ -1318,6 +1437,14 @@
       case 'laser': resolveLaser(e, t, now); break;
       case 'summon': resolveSummon(e, t); break;
       case 'syringe': resolveSyringe(e, t); break;
+      case 'quake':
+        spawnPulse(e.x, e.y, 170, '#ff7566', 'ring');
+        if (Math.hypot(player.x - e.x, player.y - e.y) <= 170 && now > player.invulnUntil) {
+          damagePlayer(e.dmg);
+          applyKnockback(e.x, e.y, 220);
+          player.invulnUntil = now + 450;
+        }
+        break;
       case 'dash':
         e.ai.dashState = 'dashing';
         e.ai.dashDir = { x: t.data.dir.x, y: t.data.dir.y };
@@ -1412,6 +1539,16 @@
   function updateBossAI(e, dt, now) {
     if (!e.ai) e.ai = createBossAI(e.bossType);
 
+    if (!e.enraged && e.hp <= e.maxHp * 0.5) {
+      e.enraged = true;
+      e.speed *= 1.15;
+      bossAnnounceText = BOSS_NAMES[e.bossType] + ' · PHASE 02';
+      bossAnnounceTimer = 2.6;
+      spawnPulse(e.x, e.y, 150, '#ff657c', 'ring');
+    }
+    // 2페이즈 진입 시 패턴 주기가 40% 빨라짐 (예고 시간/데미지는 그대로 유지해 가독성 보장)
+    const attackDt = dt * (e.enraged ? 1.4 : 1);
+
     const dx = player.x - e.x, dy = player.y - e.y;
     const d = Math.hypot(dx, dy) || 1;
     if (!(e.ai.dashState === 'dashing')) {
@@ -1474,34 +1611,38 @@
       if (!busy) {
         switch (e.bossType) {
           case 'mutantBear':
-            e.ai.summonTimer -= dt;
-            if (e.ai.summonTimer <= 0) { e.ai.summonTimer = 10; startTelegraph(e, 'summon', 0.5); }
+            e.ai.summonTimer -= attackDt;
+            if (e.ai.summonTimer <= 0) {
+              e.ai.summonTimer = e.enraged ? 6 : 10;
+              e.ai.quakeNext = !e.ai.quakeNext;
+              startTelegraph(e, e.ai.quakeNext ? 'quake' : 'summon', 1.1);
+            }
             break;
           case 'alpha':
-            e.ai.swingTimer -= dt;
+            e.ai.swingTimer -= attackDt;
             if (e.ai.swingTimer <= 0) { e.ai.swingTimer = 10; startTelegraph(e, 'semilaser', 0.5); }
             break;
           case 'omega':
-            e.ai.swingTimer -= dt;
+            e.ai.swingTimer -= attackDt;
             if (e.ai.swingTimer <= 0) { e.ai.swingTimer = 10; startTelegraph(e, 'semilaser', 0.5); }
             if (!e.telegraph) {
-              e.ai.zoneTimer -= dt;
+              e.ai.zoneTimer -= attackDt;
               if (e.ai.zoneTimer <= 0) { e.ai.zoneTimer = 15; startTelegraph(e, 'zone', 0.4); }
             }
             break;
           case 'gamma':
-            e.ai.zoneTimer -= dt;
+            e.ai.zoneTimer -= attackDt;
             if (e.ai.zoneTimer <= 0) { e.ai.zoneTimer = 10; startTelegraph(e, 'zone', 0.4); }
             if (!e.telegraph) {
-              e.ai.laserTimer -= dt;
+              e.ai.laserTimer -= attackDt;
               if (e.ai.laserTimer <= 0) { e.ai.laserTimer = 15; startTelegraph(e, 'laser', 0.6); }
             }
             break;
           case 'weakline':
-            e.ai.syringeTimer -= dt;
+            e.ai.syringeTimer -= attackDt;
             if (e.ai.syringeTimer <= 0) { e.ai.syringeTimer = 10; startTelegraph(e, 'syringe', 0.4); }
             if (!e.telegraph) {
-              e.ai.dashTimer -= dt;
+              e.ai.dashTimer -= attackDt;
               if (e.ai.dashTimer <= 0) { e.ai.dashTimer = 15; startTelegraph(e, 'dash', 0.5); }
             }
             break;
@@ -1535,7 +1676,7 @@
   }
 
   function updateHazardZones(dt) {
-    const now = performance.now();
+    const now = (elapsed * 1000);
     for (const z of hazardZones) {
       z.life -= dt;
       if (z.target === 'enemies') {
@@ -1633,7 +1774,7 @@
     player.jackieKillStreak = (player.jackieKillStreak || 0) + 1;
     if (player.jackieKillStreak >= 50) {
       player.jackieKillStreak = 0;
-      player.bloodFrenzyUntil = performance.now() + 5000;
+      player.bloodFrenzyUntil = (elapsed * 1000) + 5000;
     }
   }
 
@@ -1645,7 +1786,7 @@
     if (selectedCharacter !== 'jackie') return;
     const s2 = player.uniqueSkills.s2;
     if (!s2) return;
-    const now = performance.now();
+    const now = (elapsed * 1000);
     let pct = 0;
     if (isJackieFrenzyActive(now)) {
       const charDef = CHARACTERS.jackie;
@@ -1773,7 +1914,7 @@
   }
 
   function damagePlayer(amount) {
-    if (player.fullInvulnUntil && performance.now() < player.fullInvulnUntil) return;
+    if (player.fullInvulnUntil && (elapsed * 1000) < player.fullInvulnUntil) return;
     player.hp -= amount;
     shakeTimer = 0.25;
     shakeMag = 8;
@@ -2000,79 +2141,173 @@
     return h - Math.floor(h);
   }
 
+  function district(x, y) {
+    return Math.abs(x) < 260 || Math.abs(y) < 260
+      ? '중앙 연구구역'
+      : x < 0 ? (y < 0 ? '서북 숲길' : '폐쇄된 부두') : (y < 0 ? '실험동 외곽' : '주거구역');
+  }
+
+  function drawTacticalHUD() {
+    ctx.save();
+    const compact = W < 700;
+    ctx.fillStyle = '#0b1424e8';
+    ctx.fillRect(18, 18, compact ? 188 : 250, 57);
+    ctx.fillStyle = '#80dfe0';
+    ctx.fillRect(18, 18, 3, 57);
+    ctx.font = '10px sans-serif';
+    ctx.fillStyle = '#859bb2';
+    ctx.fillText('LUMIA ISLAND  /  SURVIVAL', 31, 37);
+    ctx.font = 'bold 15px sans-serif';
+    ctx.fillStyle = '#eff6ff';
+    ctx.fillText(district(player.x, player.y), 31, 60);
+
+    if (!compact) {
+      const size = 142, mx = W - size - 20, my = 90;
+      ctx.fillStyle = '#0a1526e8';
+      ctx.fillRect(mx - 8, my - 8, size + 16, size + 38);
+      ctx.strokeStyle = '#3a536b';
+      ctx.strokeRect(mx, my, size, size);
+      ctx.fillStyle = '#203d38';
+      ctx.fillRect(mx + 1, my + 1, size - 2, size - 2);
+      ctx.fillStyle = '#425562';
+      ctx.fillRect(mx + size * 0.47, my, 8, size);
+      ctx.fillRect(mx, my + size * 0.47, size, 8);
+      ctx.strokeStyle = '#759bad';
+      ctx.strokeRect(mx + size * 0.4, my + size * 0.4, size * 0.2, size * 0.2);
+      const pos = (v) => clamp((v - WORLD_MIN) / (WORLD_MAX - WORLD_MIN), 0, 1) * size;
+      ctx.strokeStyle = '#abc6d077';
+      ctx.strokeRect(
+        mx + pos(player.x) - (W / (WORLD_MAX - WORLD_MIN)) * size / 2,
+        my + pos(player.y) - (H / (WORLD_MAX - WORLD_MIN)) * size / 2,
+        (W / (WORLD_MAX - WORLD_MIN)) * size,
+        (H / (WORLD_MAX - WORLD_MIN)) * size
+      );
+      for (const e of enemies) {
+        if (!e.isBoss || e.dead) continue;
+        ctx.fillStyle = '#ff677e';
+        ctx.beginPath();
+        ctx.arc(mx + pos(e.x), my + pos(e.y), 3, 0, Math.PI * 2);
+        ctx.fill();
+      }
+      const meColor = (CHARACTERS[selectedCharacter] && CHARACTERS[selectedCharacter].color) || '#7fddcf';
+      ctx.fillStyle = meColor;
+      ctx.beginPath();
+      ctx.arc(mx + pos(player.x), my + pos(player.y), 4, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.fillStyle = '#9db0c4';
+      ctx.font = '10px sans-serif';
+      ctx.fillText('N ↑    탐색 지도', mx + 7, my + size + 19);
+    }
+
+    const boss = enemies.find((e) => e.isBoss && !e.dead);
+    if (boss) {
+      const bw = Math.min(410, W - 40), bx = (W - bw) / 2, by = compact ? 91 : 28;
+      ctx.fillStyle = '#101827ee';
+      ctx.fillRect(bx - 10, by - 10, bw + 20, 54);
+      ctx.fillStyle = '#f0dae0';
+      ctx.font = 'bold 12px sans-serif';
+      ctx.textAlign = 'center';
+      ctx.fillText(BOSS_NAMES[boss.bossType] + '  /  PHASE ' + (boss.enraged ? '02' : '01'), W / 2, by + 5);
+      ctx.fillStyle = '#482b3b';
+      ctx.fillRect(bx, by + 16, bw, 8);
+      ctx.fillStyle = boss.enraged ? '#ff607c' : '#d99f6c';
+      ctx.fillRect(bx, by + 16, bw * clamp(boss.hp / boss.maxHp, 0, 1), 8);
+      ctx.fillStyle = '#a9bdcf';
+      ctx.font = '10px sans-serif';
+      ctx.fillText(Math.ceil(Math.max(0, boss.hp)) + ' / ' + Math.round(boss.maxHp), W / 2, by + 37);
+    }
+    ctx.restore();
+  }
+
+  // 지역 바닥 타일은 한 번만 그려서 캐시해두고 재사용 (매 프레임 지오메트리 재생성 방지)
+  const districtTiles = new Map();
+  function mapTile(ix, iy) {
+    const key = ix + ',' + iy;
+    if (districtTiles.has(key)) return districtTiles.get(key);
+    const tile = document.createElement('canvas');
+    tile.width = 600; tile.height = 600;
+    const c = tile.getContext('2d');
+    const forest = ix < 0 && iy < 0, harbor = ix < 0 && iy >= 0;
+    c.fillStyle = forest ? '#233d36' : harbor ? '#283d46' : '#354449';
+    c.fillRect(0, 0, 600, 600);
+    for (let x = 0; x < 600; x += 50) for (let y = 0; y < 600; y += 50) {
+      const h = hashCell(ix * 12 + x / 50, iy * 12 + y / 50);
+      c.fillStyle = h > 0.5 ? '#ffffff04' : '#00000009';
+      c.fillRect(x + 1, y + 1, 48, 48);
+    }
+    // 연결된 아스팔트 도로 + 인도 + 노란 차선
+    c.fillStyle = '#647177';
+    c.fillRect(0, 0, 600, 112); c.fillRect(0, 0, 112, 600);
+    c.fillStyle = '#26323c';
+    c.fillRect(0, 7, 600, 90); c.fillRect(7, 0, 90, 600);
+    c.strokeStyle = '#b4a27199'; c.lineWidth = 2; c.setLineDash([22, 24]);
+    c.beginPath(); c.moveTo(51, 0); c.lineTo(51, 600); c.moveTo(0, 51); c.lineTo(600, 51); c.stroke();
+    c.setLineDash([]);
+    c.fillStyle = '#d3d5c566';
+    for (let i = 0; i < 6; i++) { c.fillRect(120, 12 + i * 13, 24, 7); c.fillRect(12 + i * 13, 120, 7, 24); }
+    if (forest) {
+      c.fillStyle = '#536352';
+      c.fillRect(245, 112, 54, 488);
+      for (let i = 0; i < 24; i++) {
+        const a = hashCell(ix * 33 + i, iy), b = hashCell(ix, iy * 47 + i), x = 140 + a * 420, y = 155 + b * 405;
+        if (Math.abs(x - 273) < 42) continue;
+        c.fillStyle = '#102b28';
+        c.beginPath(); c.ellipse(x + 9, y + 9, 26, 18, 0, 0, Math.PI * 2); c.fill();
+        c.fillStyle = '#30574a';
+        c.beginPath(); c.arc(x, y, 20 + a * 8, 0, Math.PI * 2); c.fill();
+        c.fillStyle = '#486c57';
+        c.beginPath(); c.arc(x - 5, y - 6, 12, 0, Math.PI * 2); c.fill();
+      }
+    } else {
+      // 개방형 실험 데크 (충돌 판정 없는 순수 바닥 장식)
+      c.fillStyle = harbor ? '#465356' : '#506066';
+      c.fillRect(160, 160, 370, 340);
+      c.strokeStyle = '#84929155'; c.lineWidth = 3;
+      c.strokeRect(167, 167, 356, 326);
+      c.strokeStyle = '#bec6bc30'; c.lineWidth = 1;
+      for (let i = 0; i < 7; i++) { c.beginPath(); c.moveTo(170, 180 + i * 45); c.lineTo(520, 180 + i * 45); c.stroke(); }
+      c.strokeStyle = harbor ? '#83b6c3' : '#83c9c5'; c.lineWidth = 2;
+      c.beginPath(); c.arc(345, 325, 74, 0, Math.PI * 2); c.stroke();
+      c.beginPath(); c.arc(345, 325, 60, 0, Math.PI * 2); c.stroke();
+      c.fillStyle = '#bbcfc780'; c.font = 'bold 42px sans-serif'; c.textAlign = 'center';
+      c.fillText(harbor ? 'H' : '0' + (1 + Math.abs(ix + iy) % 9), 345, 340);
+      c.fillStyle = '#d1c49688'; c.font = '11px sans-serif';
+      c.fillText(harbor ? 'DOCK / LANDING ZONE' : 'RESEARCH / OPEN DECK', 345, 455);
+      for (let i = 0; i < 6; i++) { c.fillStyle = '#b9a16577'; c.fillRect(183 + i * 54, 510, 26, 7); }
+    }
+    c.fillStyle = '#92cfd0';
+    for (const [x, y] of [[105, 150], [150, 105], [105, 530], [530, 105]]) {
+      c.fillRect(x, y, 4, 13);
+      c.fillStyle = '#91e2d533';
+      c.fillRect(x - 5, y - 5, 14, 23);
+      c.fillStyle = '#92cfd0';
+    }
+    districtTiles.set(key, tile);
+    return tile;
+  }
+
   function drawBackground(camX, camY) {
-    ctx.fillStyle = '#0d2117';
+    ctx.fillStyle = '#182b32';
     ctx.fillRect(0, 0, W, H);
-
-    const tile = 80;
-    const startCX = Math.floor((camX - W / 2) / tile) - 1;
-    const endCX = Math.floor((camX + W / 2) / tile) + 1;
-    const startCY = Math.floor((camY - H / 2) / tile) - 1;
-    const endCY = Math.floor((camY + H / 2) / tile) + 1;
-
-    ctx.strokeStyle = 'rgba(120, 200, 150, 0.10)';
-    ctx.lineWidth = 1;
-    for (let cx = startCX; cx <= endCX; cx++) {
-      const sx = cx * tile - camX + W / 2;
-      ctx.beginPath();
-      ctx.moveTo(sx, 0);
-      ctx.lineTo(sx, H);
-      ctx.stroke();
-    }
-    for (let cy = startCY; cy <= endCY; cy++) {
-      const sy = cy * tile - camY + H / 2;
-      ctx.beginPath();
-      ctx.moveTo(0, sy);
-      ctx.lineTo(W, sy);
-      ctx.stroke();
-    }
-
-    for (let cx = startCX; cx <= endCX; cx++) {
-      for (let cy = startCY; cy <= endCY; cy++) {
-        const h = hashCell(cx, cy);
-        const wx = cx * tile + tile / 2;
-        const wy = cy * tile + tile / 2;
-        const sx = wx - camX + W / 2;
-        const sy = wy - camY + H / 2;
-
-        if (h > 0.93) {
-          // 수풀/덤불
-          const r = 14 + h * 12;
-          ctx.fillStyle = 'rgba(30, 70, 45, 0.55)';
-          ctx.beginPath();
-          ctx.arc(sx, sy, r, 0, Math.PI * 2);
-          ctx.fill();
-          ctx.fillStyle = 'rgba(90, 180, 110, 0.35)';
-          ctx.beginPath();
-          ctx.arc(sx - r * 0.25, sy - r * 0.25, r * 0.5, 0, Math.PI * 2);
-          ctx.fill();
-        } else if (h > 0.86 && h <= 0.90) {
-          // 모래/공터
-          ctx.fillStyle = 'rgba(200, 180, 120, 0.14)';
-          ctx.beginPath();
-          ctx.arc(sx, sy, 20 + h * 8, 0, Math.PI * 2);
-          ctx.fill();
-        }
+    const left = Math.floor((camX - W / 2) / 600), right = Math.floor((camX + W / 2) / 600);
+    const top = Math.floor((camY - H / 2) / 600), bottom = Math.floor((camY + H / 2) / 600);
+    for (let ix = left; ix <= right; ix++) {
+      for (let iy = top; iy <= bottom; iy++) {
+        if (ix < -3 || ix > 2 || iy < -3 || iy > 2) continue;
+        ctx.drawImage(mapTile(ix, iy), ix * 600 - camX + W / 2, iy * 600 - camY + H / 2);
       }
     }
-
-    // 맵 테두리 (월드 경계 표시)
-    const borderLeft = WORLD_MIN - camX + W / 2;
-    const borderRight = WORLD_MAX - camX + W / 2;
-    const borderTop = WORLD_MIN - camY + H / 2;
-    const borderBottom = WORLD_MAX - camY + H / 2;
-
     ctx.save();
-    ctx.strokeStyle = '#ff4d6d';
-    ctx.lineWidth = 10;
-    ctx.shadowColor = 'rgba(255, 77, 109, 0.55)';
-    ctx.shadowBlur = 18;
-    ctx.strokeRect(borderLeft, borderTop, borderRight - borderLeft, borderBottom - borderTop);
-    ctx.shadowBlur = 0;
-    ctx.strokeStyle = 'rgba(255, 214, 102, 0.65)';
-    ctx.lineWidth = 2;
-    ctx.strokeRect(borderLeft + 6, borderTop + 6, borderRight - borderLeft - 12, borderBottom - borderTop - 12);
+    ctx.strokeStyle = '#ff7e86';
+    ctx.lineWidth = 6;
+    ctx.setLineDash([20, 10]);
+    ctx.strokeRect(WORLD_MIN - camX + W / 2, WORLD_MIN - camY + H / 2, WORLD_MAX - WORLD_MIN, WORLD_MAX - WORLD_MIN);
     ctx.restore();
+    const v = ctx.createRadialGradient(W / 2, H / 2, Math.min(W, H) * 0.2, W / 2, H / 2, Math.max(W, H) * 0.7);
+    v.addColorStop(0, '#07111e00');
+    v.addColorStop(1, '#07111e88');
+    ctx.fillStyle = v;
+    ctx.fillRect(0, 0, W, H);
   }
 
   // ============ 메인 렌더 ============
@@ -2083,7 +2318,7 @@
       return;
     }
 
-    const now = performance.now();
+    const now = (elapsed * 1000);
     let camX = player.x, camY = player.y;
     let offX = 0, offY = 0;
     if (shakeTimer > 0) {
@@ -2164,6 +2399,8 @@
       ctx.globalAlpha = t;
       ctx.strokeStyle = boltColor;
       ctx.lineWidth = 4;
+      ctx.shadowColor = boltColor;
+      ctx.shadowBlur = 18;
       ctx.beginPath();
       let bx = sx, by = sy - 260;
       ctx.moveTo(bx, by);
@@ -2212,6 +2449,8 @@
       const sx = toScreenX(p.x), sy = toScreenY(p.y);
       const a = Math.max(0, p.alpha);
       ctx.save();
+      ctx.shadowColor = p.color;
+      ctx.shadowBlur = 12;
 
       if (p.style === 'ring') {
         // 블라스트 웨이브: 밀어내는 충격파 - 속이 빈 링 + 방사형 스포크
@@ -2314,6 +2553,18 @@
     // projectiles
     for (const p of projectiles) {
       const sx = toScreenX(p.x), sy = toScreenY(p.y);
+      ctx.save();
+      ctx.strokeStyle = p.color;
+      ctx.lineWidth = p.radius * 1.1;
+      ctx.lineCap = 'round';
+      ctx.beginPath();
+      ctx.moveTo(sx, sy);
+      ctx.lineTo(sx - (p.vx || 0) * 0.035, sy - (p.vy || 0) * 0.035);
+      ctx.stroke();
+      ctx.strokeStyle = '#f3fbff';
+      ctx.lineWidth = 1.5;
+      ctx.stroke();
+      ctx.restore();
       ctx.fillStyle = p.color;
       ctx.beginPath();
       ctx.arc(sx, sy, p.radius, 0, Math.PI * 2);
@@ -2345,6 +2596,8 @@
       ctx.fill();
       ctx.globalAlpha = 1;
     }
+
+    drawCinematicEffects(toScreenX, toScreenY);
 
     // player
     const px = toScreenX(player.x), py = toScreenY(player.y);
@@ -2381,6 +2634,8 @@
       ctx.globalAlpha = 1;
     }
 
+    drawTacticalHUD();
+
     // 보스 등장 배너
     if (bossAnnounceTimer > 0 && bossAnnounceText) {
       ctx.save();
@@ -2410,8 +2665,8 @@
 
   // ============ 업데이트 루프 ============
   function update(dt) {
-    const now = performance.now();
     elapsed += dt;
+    const now = elapsed * 1000;
 
     updatePlayer(dt);
     updatePlayerEffects(dt);
@@ -2425,6 +2680,7 @@
     updateHazardZones(dt);
     updateItemBuffs(dt);
     updateItemDrops(dt);
+    updateCinematicEffects(dt);
     updateGems(dt);
     updateParticles(dt);
     updateSpawning(dt);
@@ -2511,10 +2767,21 @@
       }
 
       if (c.playable) {
+        card.tabIndex = 0;
+        card.setAttribute('role', 'button');
+        card.setAttribute('aria-label', c.name + ' 선택');
+        card.setAttribute('aria-pressed', 'false');
+        card.addEventListener('keydown', (e) => {
+          if (e.key === 'Enter' || e.key === ' ') {
+            e.preventDefault();
+            card.click();
+          }
+        });
         card.addEventListener('click', () => {
           pendingCharacter = key;
-          document.querySelectorAll('.char-card').forEach((el) => el.classList.remove('selected'));
+          document.querySelectorAll('.char-card').forEach((el) => { el.classList.remove('selected'); el.setAttribute('aria-pressed', 'false'); });
           card.classList.add('selected');
+          card.setAttribute('aria-pressed', 'true');
           charConfirmBtn.disabled = false;
           renderSkillPreview(key);
         });
