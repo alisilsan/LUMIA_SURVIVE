@@ -6,11 +6,11 @@ const WEAPON_DEFS = {
       desc: '가장 가까운 적을 추적합니다.',
       color: '#ffb86b',
       levels: [
-        { count: 1, damage: 16, cooldown: 1600, speed: 340, splash: 40 },
-        { count: 1, damage: 21, cooldown: 1450, speed: 350, splash: 44 },
-        { count: 2, damage: 26, cooldown: 1350, speed: 360, splash: 48 },
-        { count: 2, damage: 32, cooldown: 1250, speed: 370, splash: 52 },
-        { count: 3, damage: 40, cooldown: 1150, speed: 380, splash: 56 },
+        { count: 1, damage: 15, cooldown: 1600, speed: 340, splash: 40 },
+        { count: 1, damage: 18, cooldown: 1450, speed: 350, splash: 44 },
+        { count: 2, damage: 20, cooldown: 1350, speed: 360, splash: 48 },
+        { count: 2, damage: 25, cooldown: 1250, speed: 370, splash: 52 },
+        { count: 3, damage: 30, cooldown: 1150, speed: 380, splash: 56 },
       ],
     },
     protocol: {

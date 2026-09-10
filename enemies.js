@@ -1,10 +1,10 @@
 // 일반 몬스터 / 보스 데이터 및 픽셀 스프라이트
 
 const ENEMY_DEFS = {
-    wolf:      { hp: 18, dmg: 6, speed: 92, radius: 14, color: '#6b6f76', xp: 3 },   // 일반 잡몹 (중간)
-    bear:      { hp: 55, dmg: 10, speed: 55, radius: 21, color: '#8a5a2b', xp: 6 },  // 느리지만 체력 많음
-    chicken:   { hp: 10, dmg: 4, speed: 150, radius: 11, color: '#f5f5f0', xp: 2 },  // 빠르지만 약함
-    mutantWolf:{ hp: 27, dmg: 6, speed: 92, radius: 14, color: '#4a4d55', xp: 4 },   // 변이곰이 소환 (늑대 체력의 1.5배)
+    wolf:      { hp: 18, dmg: 6, speed: 82.8, radius: 14, color: '#6b6f76', xp: 3 },   // 일반 잡몹 (중간)
+    bear:      { hp: 55, dmg: 10, speed: 49.5, radius: 21, color: '#8a5a2b', xp: 6 },  // 느리지만 체력 많음
+    chicken:   { hp: 10, dmg: 4, speed: 120, radius: 11, color: '#f5f5f0', xp: 2 },  // 빠르지만 약함
+    mutantWolf:{ hp: 27, dmg: 6, speed: 82.8, radius: 14, color: '#4a4d55', xp: 4 },   // 변이곰이 소환 (늑대 체력의 1.5배)
   };
 
 // 8x8 픽셀아트 패턴 ('0' = 투명, 그 외 숫자는 팔레트 색상 키)

@@ -12,11 +12,11 @@ const CHARACTERS = {
           desc: '지정한 방향으로 탄환 1개를 발사해 적중한 적에게 피해를 입힙니다.',
           unlockLevel: 1,
           levels: [
-            { damage: 16, cooldown: 3, desc: '쿨다운 3.0초 · 피해 16' },
-            { damage: 20, cooldown: 2.5, desc: '쿨다운 2.5초 · 피해 20' },
-            { damage: 25, cooldown: 2, desc: '쿨다운 2.0초 · 피해 25' },
-            { damage: 30, cooldown: 1.5, desc: '쿨다운 1.5초 · 피해 30' },
-            { damage: 36, cooldown: 1, slow: true, desc: '쿨다운 1.0초 · 피해 36 · 적중 시 0.5초간 이동속도 30% 감소' },
+            { damage: 16, pierce: 1, cooldown: 3, desc: '쿨다운 3.0초 · 피해 16 · 관통 1회' },
+            { damage: 19, pierce: 1, cooldown: 2.5, desc: '쿨다운 2.5초 · 피해 19 · 관통 1회' },
+            { damage: 22, pierce: 2, cooldown: 2, desc: '쿨다운 2.0초 · 피해 22 · 관통 2회' },
+            { damage: 25, pierce: 2, cooldown: 1.5, desc: '쿨다운 1.5초 · 피해 25 · 관통 2회' },
+            { damage: 28, pierce: 3, cooldown: 1, slow: true, desc: '쿨다운 1.0초 · 피해 28 · 적중 시 1초간 이동속도 30% 감소 · 관통 3회' },
           ],
         },
         s2: {
@@ -25,10 +25,10 @@ const CHARACTERS = {
           unlockLevel: 3,
           levels: [
             { damage: 20, cooldown: 15, radius: 200, desc: '반경 200 · 쿨다운 15초 · 피해 20 · 이동속도 30% 감소(0.5초)' },
-            { damage: 26, cooldown: 13, radius: 200, desc: '반경 200 · 쿨다운 13초 · 피해 26 · 이동속도 30% 감소(0.5초)' },
-            { damage: 32, cooldown: 10, radius: 200, desc: '반경 200 · 쿨다운 10초 · 피해 32 · 이동속도 30% 감소(0.5초)' },
-            { damage: 40, cooldown: 8, radius: 200, desc: '반경 200 · 쿨다운 8초 · 피해 40 · 이동속도 30% 감소(0.5초)' },
-            { damage: 50, cooldown: 8, radius: 200, root: true, desc: '반경 200 · 쿨다운 8초 · 피해 50 · 적중 시 1초간 속박' },
+            { damage: 25, cooldown: 13, radius: 200, desc: '반경 200 · 쿨다운 13초 · 피해 25 · 이동속도 30% 감소(0.5초)' },
+            { damage: 30, cooldown: 10, radius: 200, desc: '반경 200 · 쿨다운 10초 · 피해 30 · 이동속도 30% 감소(0.5초)' },
+            { damage: 35, cooldown: 8, radius: 200, desc: '반경 200 · 쿨다운 8초 · 피해 35 · 이동속도 30% 감소(0.5초)' },
+            { damage: 40, cooldown: 8, radius: 200, root: true, desc: '반경 200 · 쿨다운 8초 · 피해 40 · 적중 시 1.5초간 속박' },
           ],
         },
         s3: {
@@ -38,14 +38,15 @@ const CHARACTERS = {
           levels: [
             { damage: 24, cooldown: 25, strikes: 1, desc: '쿨다운 25초 · 피해 24 · 낙뢰 1개' },
             { damage: 30, cooldown: 23, strikes: 1, desc: '쿨다운 23초 · 피해 30 · 낙뢰 1개' },
-            { damage: 37, cooldown: 20, strikes: 2, desc: '쿨다운 20초 · 피해 37 · 낙뢰 2개' },
-            { damage: 45, cooldown: 18, strikes: 2, desc: '쿨다운 18초 · 피해 45 · 낙뢰 2개' },
-            { damage: 55, cooldown: 15, strikes: 3, desc: '쿨다운 15초 · 피해 55 · 낙뢰 3개로 증가' },
+            { damage: 36, cooldown: 20, strikes: 2, desc: '쿨다운 20초 · 피해 36 · 낙뢰 2개' },
+            { damage: 42, cooldown: 18, strikes: 2, desc: '쿨다운 18초 · 피해 42 · 낙뢰 2개' },
+            { damage: 48, cooldown: 15, strikes: 3, desc: '쿨다운 15초 · 피해 48 · 낙뢰 3개로 증가' },
           ],
         },
       },
     },
     celine: {
+      areaRadiusMult: 1.1,
       name: '셀린',
       tagline: '폭발물 전문가',
       color: '#ff9a3c',
@@ -57,22 +58,22 @@ const CHARACTERS = {
           unlockLevel: 1,
           levels: [
             { damage: 22, cooldown: 6, radius: 70, desc: '쿨다운 6.0초 · 피해 22' },
-            { damage: 28, cooldown: 5.5, radius: 75, desc: '쿨다운 5.5초 · 피해 28' },
-            { damage: 35, cooldown: 5, radius: 80, desc: '쿨다운 5.0초 · 피해 35' },
+            { damage: 29, cooldown: 5.5, radius: 75, desc: '쿨다운 5.5초 · 피해 29' },
+            { damage: 36, cooldown: 5, radius: 80, desc: '쿨다운 5.0초 · 피해 36' },
             { damage: 43, cooldown: 4.5, radius: 85, desc: '쿨다운 4.5초 · 피해 43' },
-            { damage: 52, cooldown: 4, radius: 90, multiHit: 3, desc: '쿨다운 4.0초 · 피해 52 · 3회 연속 폭발' },
+            { damage: 50, cooldown: 4, radius: 90, multiHit: 3, desc: '쿨다운 4.0초 · 피해 50 · 3회 연속 폭발' },
           ],
         },
         s2: {
           name: '블라스트 웨이브',
-          desc: '충격파 폭탄을 던져 범위 내 적과 자신을 밀어내며 피해를 입힙니다.',
+          desc: '반경 200 내 랜덤 적 위치에 충격파 폭탄을 던집니다. 적이 없으면 반경 200 내 랜덤 위치에 발동합니다.',
           unlockLevel: 3,
           levels: [
             { damage: 18, cooldown: 12, radius: 130, desc: '반경 130 · 쿨다운 12초 · 피해 18 · 적/자신 넉백' },
             { damage: 23, cooldown: 11, radius: 130, desc: '반경 130 · 쿨다운 11초 · 피해 23 · 적/자신 넉백' },
             { damage: 29, cooldown: 10, radius: 130, desc: '반경 130 · 쿨다운 10초 · 피해 29 · 적/자신 넉백' },
             { damage: 36, cooldown: 9, radius: 130, desc: '반경 130 · 쿨다운 9초 · 피해 36 · 적/자신 넉백' },
-            { damage: 44, cooldown: 8, radius: 130, zone: true, desc: '반경 130 · 쿨다운 8초 · 피해 44 · 넉백 + 1초 장판(0.2초마다 현재체력 5%)' },
+            { damage: 44, cooldown: 8, radius: 130, zone: true, desc: '반경 130 · 쿨다운 8초 · 피해 44 · 넉백 + 1초 장판(0.2초마다 최대체력 5%)' },
           ],
         },
         s3: {
@@ -84,7 +85,7 @@ const CHARACTERS = {
             { damage: 26, cooldown: 25, radius: 110, desc: '반경 110 · 쿨다운 25초 · 피해 26' },
             { damage: 32, cooldown: 23, radius: 110, desc: '반경 110 · 쿨다운 23초 · 피해 32' },
             { damage: 40, cooldown: 22, radius: 110, desc: '반경 110 · 쿨다운 22초 · 피해 40' },
-            { damage: 50, cooldown: 20, radius: 110, zone: true, desc: '반경 110 · 쿨다운 20초 · 피해 50 · 3초 장판(0.5초마다 현재체력 5%)' },
+            { damage: 50, cooldown: 20, radius: 110, zone: true, desc: '반경 110 · 쿨다운 20초 · 피해 50 · 3초 장판(0.5초마다 최대체력 5%)' },
           ],
         },
       },
@@ -97,7 +98,7 @@ const CHARACTERS = {
       skills: {
         s1: {
           name: '힘줄 절단',
-          desc: '반경 100 내 가장 가까운 적 방향으로 부채꼴 범위 공격을 하고 출혈을 부여합니다.',
+          desc: '반경 200 내 가장 가까운 적 방향으로 휘두르고, 적이 없으면 랜덤 방향으로 휘두릅니다. 부채꼴 공격 범위 내 적에게 출혈을 부여합니다.',
           unlockLevel: 1,
           levels: [
             { damage: 18, cooldown: 4, coneDeg: 60, desc: '쿨다운 4.0초 · 피해 18 · 범위 60°' },
@@ -205,6 +206,7 @@ const PLAYER_SPRITES = {
       },
     },
     celine: {
+      areaRadiusMult: 1.1,
       pattern: PLAYER_BASE_PATTERN,
       palette: {
         '1': '#1a1610', '2': '#f2c9a0', '3': '#4de8e0',

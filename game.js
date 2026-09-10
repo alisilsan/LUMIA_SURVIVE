@@ -571,13 +571,16 @@
   let bossAnnounceText = null, bossAnnounceTimer = 0;
   let itemAnnounceText = null, itemAnnounceTimer = 0;
 
+  let limitedDropCounts;
+
   function initGame() {
+    limitedDropCounts = { greatPill: 0, seleneTear: 0 };
     const isJackie = selectedCharacter === 'jackie';
     player = {
       x: 0, y: 0, radius: 14,
       hp: isJackie ? 120 : 100, maxHp: isJackie ? 120 : 100,
       speed: 240, speedMult: 1,
-      damageMult: isJackie ? 1.1 : 1, // 근접 캐릭터 보정: 데미지 +10%
+      damageMult: 1,
       regen: 0,
       regenPercent: 0,
       lifestealPct: 0,
@@ -672,6 +675,7 @@
   }
 
   function spawnEnemy(tier) {
+    tier = Math.min(tier, 15);
     const typeKey = pick(['wolf', 'bear', 'chicken']);
     const def = ENEMY_DEFS[typeKey];
     const hpMult = 1 + tier * 0.12;
@@ -742,11 +746,20 @@
     }
   }
 
+  function effectiveAreaStat(stat) {
+    const mult = CHARACTERS[selectedCharacter].areaRadiusMult || 1;
+    if (mult === 1) return stat;
+    const adjusted = { ...stat };
+    if (typeof stat.radius === 'number') adjusted.radius = stat.radius * mult;
+    if (typeof stat.splash === 'number') adjusted.splash = stat.splash * mult;
+    return adjusted;
+  }
+
   function updateWeapons(dt, now) {
     for (const wid in player.weapons) {
       const w = player.weapons[wid];
       const def = WEAPON_DEFS[wid];
-      const stat = def.levels[w.level - 1];
+      const stat = effectiveAreaStat(def.levels[w.level - 1]);
 
       w.cooldownTimer -= dt * 1000;
       if (w.cooldownTimer <= 0) {
@@ -814,7 +827,7 @@
       const w = player.uniqueSkills[skillKey];
       const def = charDef.skills[skillKey];
       if (!def || def.passive) continue; // 패시브 스킬은 쿨타임 발동식이 아님
-      const stat = def.levels[w.level - 1];
+      const stat = effectiveAreaStat(def.levels[w.level - 1]);
 
       w.cooldownTimer -= dt * 1000;
       if (w.cooldownTimer <= 0) {
@@ -1026,12 +1039,12 @@
       x: player.x, y: player.y,
       vx: Math.cos(ang) * 480, vy: Math.sin(ang) * 480,
       damage: stat.damage,
-      pierce: 1,
+      pierce: stat.pierce,
       radius: 6,
       life: 1.6,
       color: myColor,
       hitSet: new Set(),
-      onHit: stat.slow ? (e) => applySlow(e, 0.3, 0.5, now) : null,
+      onHit: stat.slow ? (e) => applySlow(e, 0.3, 1.0, now) : null,
     });
   }
 
@@ -1044,7 +1057,7 @@
       if (d <= stat.radius) {
         damageEnemy(e, stat.damage);
         applySlow(e, 0.3, 0.5, now);
-        if (stat.root) applyRoot(e, 1.0, now);
+        if (stat.root) applyRoot(e, 1.5, now);
       }
     }
     spawnPulse(player.x, player.y, stat.radius, myColor);
@@ -1076,8 +1089,8 @@
   }
 
   function fireCelineBlast(stat) {
-    const cx = clamp(player.x + player.dir.x * 120, WORLD_MIN, WORLD_MAX);
-    const cy = clamp(player.y + player.dir.y * 120, WORLD_MIN, WORLD_MAX);
+    const pos = pickTargetNearMonster(200, 200);
+    const cx = pos.x, cy = pos.y;
     for (const e of enemies) {
       if (e.dead) continue;
       const d = Math.hypot(e.x - cx, e.y - cy);
@@ -1093,7 +1106,7 @@
     if (stat.zone) {
       hazardZones.push({
         x: cx, y: cy, radius: stat.radius,
-        target: 'enemies', percentCurrentHp: 0.05,
+        target: 'enemies', percentMaxHp: 0.05,
         tickInterval: 0.2, tickTimer: 0, life: 1.0, color: CELINE_BLAST_COLOR,
       });
     }
@@ -1110,7 +1123,7 @@
     if (stat.zone) {
       hazardZones.push({
         x, y, radius: stat.radius,
-        target: 'enemies', percentCurrentHp: 0.05,
+        target: 'enemies', percentMaxHp: 0.05,
         tickInterval: 0.5, tickTimer: 0, life: 3.0, color: CELINE_FUSION_COLOR,
       });
     }
@@ -1120,9 +1133,7 @@
   function fireJackieTendonCut(stat) {
     const now = (elapsed * 1000);
     const myColor = CHARACTERS.jackie.color;
-    const aim = dirToNearestInRadius(100);
-    if (!aim) return; // 반경 100 내 적이 없으면 발동하지 않음
-    const dir = aim;
+    const dir = dirToNearestOrRandom(200);
     const coneRad = (stat.coneDeg * Math.PI) / 180;
     const range = 140;
     let hitAny = false;
@@ -1479,7 +1490,7 @@
   }
 
   function resolveSummon(e, t) {
-    const tier = difficultyTier();
+    const tier = Math.min(difficultyTier(), 15);
     const hpMult = 1 + tier * 0.12, dmgMult = 1 + tier * 0.08, speedMult = Math.min(1.5, 1 + tier * 0.02);
     const def = ENEMY_DEFS.mutantWolf;
     for (let i = 0; i < 5; i++) {
@@ -1688,7 +1699,7 @@
               } else if (z.slowPct) {
                 applySlow(e, z.slowPct, z.tickInterval * 1.6, now);
               } else {
-                const dmg = z.percentCurrentHp ? e.hp * z.percentCurrentHp : z.damage;
+                const dmg = z.percentMaxHp ? e.maxHp * z.percentMaxHp : z.percentCurrentHp ? e.hp * z.percentCurrentHp : z.damage;
                 damageEnemy(e, dmg);
               }
             }
@@ -1735,9 +1746,11 @@
     if (options.flat !== false) amount += player.statFlatDamage + player.itemFlatDamage;
     e.hp -= amount;
     e.hitFlash = 1;
-    applyJackieLifesteal(amount);
-    if (player.lifestealPct > 0) {
-      player.hp = Math.min(player.maxHp, player.hp + amount * player.lifestealPct);
+    if (options.lifesteal !== false) {
+      applyJackieLifesteal(amount);
+      if (player.lifestealPct > 0) {
+        player.hp = Math.min(player.maxHp, player.hp + amount * player.lifestealPct);
+      }
     }
     if (e.hp <= 0) {
       e.dead = true;
@@ -1754,7 +1767,10 @@
       }
 
       if (Math.random() < CONSUMABLE_DROP_CHANCE) {
-        spawnItemDrop(e.x, e.y, pick(Object.keys(CONSUMABLE_ITEMS)));
+        const eligibleItems = Object.keys(CONSUMABLE_ITEMS).filter(
+          key => !(key in limitedDropCounts) || limitedDropCounts[key] < 3
+        );
+        if (eligibleItems.length) spawnItemDrop(e.x, e.y, pick(eligibleItems));
       }
 
       handleJackieBloodFestivalKill();
@@ -1837,6 +1853,10 @@
   }
 
   function spawnItemDrop(x, y, key) {
+    if (key in limitedDropCounts) {
+      if (limitedDropCounts[key] >= 3) return;
+      limitedDropCounts[key] += 1;
+    }
     itemDrops.push({ x, y, key, radius: 14, bob: rand(0, Math.PI * 2) });
   }
 
@@ -1862,7 +1882,7 @@
     for (const e of enemies) {
       if (e.dead) continue;
       const d = Math.hypot(e.x - x, e.y - y);
-      if (d <= strikeRadius) damageEnemy(e, e.hp + 99999, { flat: false });
+      if (d <= strikeRadius) damageEnemy(e, e.hp + 99999, { flat: false, lifesteal: false });
     }
 
     lightningStrikes.push({ x, y, radius: strikeRadius, timer: 0.35 });
@@ -1871,7 +1891,7 @@
   function applyRuinDamageToAllEnemies() {
     for (const e of enemies) {
       if (e.dead) continue;
-      damageEnemy(e, e.maxHp * 0.05, { flat: false });
+      damageEnemy(e, e.maxHp * 0.05, { flat: false, lifesteal: false });
     }
   }
 
