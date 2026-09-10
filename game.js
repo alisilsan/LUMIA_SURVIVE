@@ -1100,9 +1100,6 @@
       }
     }
     spawnPulse(cx, cy, stat.radius, CELINE_BLAST_COLOR, 'ring');
-    const recoil = getAimDirection();
-    player.kx -= recoil.x * 160;
-    player.ky -= recoil.y * 160;
     if (stat.zone) {
       hazardZones.push({
         x: cx, y: cy, radius: stat.radius,
