@@ -461,10 +461,12 @@
   let itemAnnounceText = null, itemAnnounceTimer = 0;
 
   function initGame() {
+    const isJackie = selectedCharacter === 'jackie';
     player = {
       x: 0, y: 0, radius: 14,
-      hp: 100, maxHp: 100,
+      hp: isJackie ? 120 : 100, maxHp: isJackie ? 120 : 100,
       speed: 200, speedMult: 1,
+      damageMult: isJackie ? 1.1 : 1, // 근접 캐릭터 보정: 데미지 +10%
       regen: 0,
       regenPercent: 0,
       lifestealPct: 0,
@@ -1578,6 +1580,7 @@
 
   function damageEnemy(e, amount) {
     if (e.dead) return;
+    if (player.damageMult && player.damageMult !== 1) amount *= player.damageMult;
     e.hp -= amount;
     e.hitFlash = 1;
     applyJackieLifesteal(amount);
