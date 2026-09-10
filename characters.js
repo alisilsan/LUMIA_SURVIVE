@@ -12,11 +12,11 @@ const CHARACTERS = {
           desc: '지정한 방향으로 탄환 1개를 발사해 적중한 적에게 피해를 입힙니다.',
           unlockLevel: 1,
           levels: [
-            { damage: 16, cooldown: 3, desc: '쿨다운 4.0초 · 피해 16' },
-            { damage: 20, cooldown: 2.5, desc: '쿨다운 3.5초 · 피해 20' },
-            { damage: 25, cooldown: 2, desc: '쿨다운 3.0초 · 피해 25' },
-            { damage: 30, cooldown: 1.5, desc: '쿨다운 2.5초 · 피해 30' },
-            { damage: 36, cooldown: 1, slow: true, desc: '쿨다운 2.0초 · 피해 36 · 적중 시 0.5초간 이동속도 30% 감소' },
+            { damage: 16, cooldown: 3, desc: '쿨다운 3.0초 · 피해 16' },
+            { damage: 20, cooldown: 2.5, desc: '쿨다운 2.5초 · 피해 20' },
+            { damage: 25, cooldown: 2, desc: '쿨다운 2.0초 · 피해 25' },
+            { damage: 30, cooldown: 1.5, desc: '쿨다운 1.5초 · 피해 30' },
+            { damage: 36, cooldown: 1, slow: true, desc: '쿨다운 1.0초 · 피해 36 · 적중 시 0.5초간 이동속도 30% 감소' },
           ],
         },
         s2: {
@@ -56,11 +56,11 @@ const CHARACTERS = {
           desc: '폭탄을 투척해 적중 지점의 적에게 피해를 입힙니다.',
           unlockLevel: 1,
           levels: [
-            { damage: 22, cooldown: 5, radius: 70, desc: '쿨다운 7.0초 · 피해 22' },
-            { damage: 28, cooldown: 4.5, radius: 75, desc: '쿨다운 6.5초 · 피해 28' },
-            { damage: 35, cooldown: 4, radius: 80, desc: '쿨다운 6.0초 · 피해 35' },
-            { damage: 43, cooldown: 3.5, radius: 85, desc: '쿨다운 5.5초 · 피해 43' },
-            { damage: 52, cooldown: 3, radius: 90, multiHit: 3, desc: '쿨다운 5.0초 · 피해 52 · 3회 연속 폭발' },
+            { damage: 22, cooldown: 6, radius: 70, desc: '쿨다운 6.0초 · 피해 22' },
+            { damage: 28, cooldown: 5.5, radius: 75, desc: '쿨다운 5.5초 · 피해 28' },
+            { damage: 35, cooldown: 5, radius: 80, desc: '쿨다운 5.0초 · 피해 35' },
+            { damage: 43, cooldown: 4.5, radius: 85, desc: '쿨다운 4.5초 · 피해 43' },
+            { damage: 52, cooldown: 4, radius: 90, multiHit: 3, desc: '쿨다운 4.0초 · 피해 52 · 3회 연속 폭발' },
           ],
         },
         s2: {
@@ -97,14 +97,14 @@ const CHARACTERS = {
       skills: {
         s1: {
           name: '힘줄 절단',
-          desc: '마우스 방향 전방 부채꼴 범위의 적에게 피해를 입히고 출혈을 부여합니다.',
+          desc: '반경 100 내 가장 가까운 적 방향으로 부채꼴 범위 공격을 하고 출혈을 부여합니다.',
           unlockLevel: 1,
           levels: [
-            { damage: 18, cooldown: 4, coneDeg: 60, desc: '쿨다운 5.0초 · 피해 18 · 범위 60°' },
-            { damage: 23, cooldown: 3.5, coneDeg: 70, desc: '쿨다운 4.5초 · 피해 23 · 범위 70°' },
-            { damage: 29, cooldown: 3, coneDeg: 80, desc: '쿨다운 4.0초 · 피해 29 · 범위 80°' },
-            { damage: 36, cooldown: 2.5, coneDeg: 90, desc: '쿨다운 3.5초 · 피해 36 · 범위 90°' },
-            { damage: 44, cooldown: 2, coneDeg: 100, slow: true, desc: '쿨다운 3.0초 · 피해 44 · 범위 100° · 적중 시 3초간 이동속도 30% 감소' },
+            { damage: 18, cooldown: 4, coneDeg: 60, desc: '쿨다운 4.0초 · 피해 18 · 범위 60°' },
+            { damage: 23, cooldown: 3.5, coneDeg: 70, desc: '쿨다운 3.5초 · 피해 23 · 범위 70°' },
+            { damage: 29, cooldown: 3, coneDeg: 80, desc: '쿨다운 3.0초 · 피해 29 · 범위 80°' },
+            { damage: 36, cooldown: 2.5, coneDeg: 90, desc: '쿨다운 2.5초 · 피해 36 · 범위 90°' },
+            { damage: 44, cooldown: 2, coneDeg: 100, slow: true, desc: '쿨다운 2.0초 · 피해 44 · 범위 100° · 적중 시 3초간 이동속도 30% 감소' },
           ],
         },
         s2: {
@@ -145,11 +145,11 @@ const CHARACTERS = {
           desc: '가장 가까운 대상을 향해 2번 빠르게 사격합니다.',
           unlockLevel: 1,
           levels: [
-            { damage: 14, cooldown: 6, pierce: 1, desc: '쿨다운 6.0초 · 피해 14×2' },
-            { damage: 18, cooldown: 5.5, pierce: 1, desc: '쿨다운 5.5초 · 피해 18×2' },
-            { damage: 22, cooldown: 5, pierce: 1, desc: '쿨다운 5.0초 · 피해 22×2' },
-            { damage: 27, cooldown: 4.5, pierce: 1, desc: '쿨다운 4.5초 · 피해 27×2' },
-            { damage: 33, cooldown: 4, pierce: 3, desc: '쿨다운 4.0초 · 피해 33×2 · 관통' },
+            { damage: 14, cooldown: 5, pierce: 1, desc: '쿨다운 5.0초 · 피해 14×2' },
+            { damage: 18, cooldown: 4.5, pierce: 1, desc: '쿨다운 4.5초 · 피해 18×2' },
+            { damage: 22, cooldown: 4, pierce: 1, desc: '쿨다운 4.0초 · 피해 22×2' },
+            { damage: 27, cooldown: 3.5, pierce: 1, desc: '쿨다운 3.5초 · 피해 27×2' },
+            { damage: 33, cooldown: 3, pierce: 3, desc: '쿨다운 3.0초 · 피해 33×2 · 관통' },
           ],
         },
         s2: {
