@@ -1,0 +1,104 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+<title>루미아 섬 살아남기</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<div id="gameContainer">
+  <canvas id="game"></canvas>
+
+  <div id="hint">WASD / 방향키: 이동<br>모바일: 화면 좌하단 드래그</div>
+
+  <button id="pauseBtn" aria-label="일시정지">⏸</button>
+  <button id="statusBtn" aria-label="상태창">📋</button>
+
+
+  <div id="joystickZone"></div>
+  <div id="joystickBase"><div id="joystickKnob"></div></div>
+
+  <div id="flash"></div>
+
+  <div class="overlay" id="charSelectOverlay">
+    <div class="panel" style="max-width: 640px;">
+      <h1>캐릭터 선택</h1>
+      <p>루미아 섬을 탐험할 캐릭터를 선택하세요.</p>
+      <div id="charGrid"></div>
+      <div id="skillPreview" class="hidden"></div>
+      <button class="btn" id="charConfirmBtn" disabled>선택하기</button>
+    </div>
+  </div>
+
+  <div class="overlay hidden" id="startOverlay">
+    <div class="panel">
+      <h1>루미아 섬 살아남기</h1>
+      <p>
+        루미아 섬에 갇힌 당신. 밀려오는 실험체들 속에서<br>
+        50레벨 보스 <b>위클라인 박사</b>를 물리치면 클리어!<br><br>
+        이동만 하면 무기는 자동으로 발동됩니다.<br>
+        레벨업 시 무기와 능력을 골라 강해지세요.<br>
+        레벨 10, 20, 30, 40, 50마다 강력한 보스가 등장합니다.
+      </p>
+      <button class="btn" id="startBtn">탐험 시작</button>
+    </div>
+  </div>
+
+  <div class="overlay hidden" id="levelupOverlay">
+    <div class="panel">
+      <h2>레벨 업!</h2>
+      <div id="cardRow"></div>
+      <button class="btn" id="rerollBtn" style="margin-top:14px; background:linear-gradient(90deg, var(--purple), var(--pink));">🎲 새로고침 (<span id="rerollCount">3</span>)</button>
+    </div>
+  </div>
+
+  <div class="overlay hidden" id="pauseOverlay">
+    <div class="panel">
+      <h2>일시정지</h2>
+      <p>ESC 키를 다시 누르면 게임이 재개됩니다.</p>
+      <button class="btn" id="resumeBtn">계속하기</button>
+      <button class="btn" id="restartFromPauseBtn" style="margin-top:10px; background:linear-gradient(90deg, var(--danger), var(--orange));">처음부터 다시하기</button>
+    </div>
+  </div>
+
+  <div id="statusPanel" class="hidden">
+    <div class="status-panel-header">
+      <div class="status-header-left">
+        <span id="timer">00:00</span>
+        <span id="killCount">처치: 0</span>
+      </div>
+      <button id="statusCollapseBtn" class="mini-btn">－</button>
+    </div>
+    <div id="statusContent"></div>
+  </div>
+
+  <div class="overlay hidden" id="gameoverOverlay">
+    <div class="panel">
+      <h2 style="color:var(--danger)">쓰러졌습니다...</h2>
+      <div class="stat-row">
+        <div>생존 시간<strong id="overTime">00:00</strong></div>
+        <div>도달 레벨<strong id="overLevel">1</strong></div>
+        <div>처치 수<strong id="overKills">0</strong></div>
+      </div>
+      <button class="btn" id="retryBtn">다시 도전</button>
+    </div>
+  </div>
+
+  <div class="overlay hidden" id="victoryOverlay">
+    <div class="panel">
+      <h2 style="color:var(--gold)">클리어!</h2>
+      <p>최종 보스 위클라인 박사를 물리치고 루미아 섬을 탈출했습니다.</p>
+      <div class="stat-row">
+        <div>생존 시간<strong id="winTime">10:00</strong></div>
+        <div>도달 레벨<strong id="winLevel">1</strong></div>
+        <div>처치 수<strong id="winKills">0</strong></div>
+      </div>
+      <button class="btn" id="victoryRetryBtn">다시 도전</button>
+    </div>
+  </div>
+</div>
+
+<script type="module" src="js/game.js"></script>
+</body>
+</html>
