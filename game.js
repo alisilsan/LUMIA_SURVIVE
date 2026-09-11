@@ -135,7 +135,7 @@
           let badge;
           if (def.passive) {
             const now = (elapsed * 1000);
-            badge = isJackieFrenzyActive(now) ? '광기!' : '패시브';
+            badge = isJackieFrenzyActive(now) ? '광기!' : `${player.jackieKillStreak || 0}/50`;
           } else {
             badge = formatCooldownBadge(owned.cooldownTimer);
           }
@@ -1132,7 +1132,7 @@
     const myColor = CHARACTERS.jackie.color;
     const dir = dirToNearestOrRandom(200);
     const coneRad = (stat.coneDeg * Math.PI) / 180;
-    const range = 140;
+    const range = 200;
     let hitAny = false;
     for (const e of enemies) {
       if (e.dead) continue;
@@ -1156,7 +1156,7 @@
     for (let i=0; i<stat.zones; i++) {
       const pos=pickTargetNearMonster(300,300);
       hazardZones.push({x:pos.x,y:pos.y,radius:130,target:'enemies',
-        jackieBloodZone:true,drain:!!stat.drain,tickInterval:1,tickTimer:1,
+        jackieBloodZone:true,drainPct:stat.drainPct||0,tickInterval:1,tickTimer:1,
         ticksLeft:3,life:3,color:CHARACTERS.jackie.color});
       spawnPulse(pos.x,pos.y,130,CHARACTERS.jackie.color,'ring');
     }
@@ -1676,9 +1676,9 @@
           z.tickTimer += 1; z.ticksLeft--;
           for (const e of enemies) {
             if (e.dead || Math.hypot(e.x-z.x,e.y-z.y)>z.radius) continue;
-            const drain=e.maxHp*.01;
+            const drain=e.maxHp*(z.drainPct||0);
             damageEnemy(e,e.maxHp*.05,{scale:false});
-            if(z.drain) player.hp=Math.min(player.maxHp,player.hp+drain);
+            if(drain>0) player.hp=Math.min(player.maxHp,player.hp+drain);
           }
         }
         continue;
