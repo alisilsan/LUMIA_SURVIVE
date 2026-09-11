@@ -94,9 +94,9 @@ const STAT_DEFS = {
     },
     burgundy47: {
       title: '버건디 47',
-      desc: '모든 피해에 흡혈 적용 (1%→1.5%→2%→2.5%→3%)',
+      desc: '모든 피해에 흡혈 적용 (0.5%→0.7%→0.8%→0.9%→1%)',
       apply(p) {
-        const tiers = [0.01, 0.015, 0.02, 0.025, 0.03];
+        const tiers = [0.005, 0.007, 0.008, 0.009, 0.01];
         p.lifestealPct = tiers[p.statPicks.burgundy47 - 1];
       },
     },

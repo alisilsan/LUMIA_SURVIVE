@@ -700,7 +700,7 @@
 
   function spawnBoss(level) {
     const pos = spawnPosAroundPlayer(Math.max(W, H) * 0.55 + 100);
-    const hp = (300 + level * 45) * 3; // 체력 3배
+    const hp = (300 + level * 45) * 1.5; // 기존 보스 체력의 50%
     const bossIndex = Math.floor(level / 10) - 1;
     const bossKey = BOSS_ORDER[bossIndex % BOSS_ORDER.length];
     enemies.push({
@@ -866,9 +866,9 @@
 
   // 캐릭터 선택 화면 소개용 평타 정보 (이름 / 설명)
   const BASIC_ATTACK_INFO = {
-    aiden: { name: '뇌격', desc: '반경 100 내 가장 가까운 적 방향으로 검을 휘두릅니다. (쿨다운 3초, 강화 불가)' },
+    aiden: { name: '뇌격', desc: '반경 200 내 가장 가까운 적 방향으로 검을 휘두릅니다. (쿨다운 3초, 강화 불가)' },
     celine: { name: '콩알탄', desc: '반경 200 내 가장 가까운 적 방향으로 투사체를 발사합니다. (쿨다운 3초, 강화 불가)' },
-    jackie: { name: '휘두르기', desc: '반경 100 내 가장 가까운 적 방향으로 검을 휘두릅니다. (쿨다운 3초, 강화 불가)' },
+    jackie: { name: '휘두르기', desc: '반경 200 내 가장 가까운 적 방향으로 검을 휘두릅니다. (쿨다운 3초, 강화 불가)' },
     aya: { name: '위협 사격', desc: '반경 200 내 가장 가까운 적 방향으로 투사체를 발사합니다. (쿨다운 3초, 강화 불가)' },
   };
 
@@ -889,9 +889,9 @@
   }
 
   function fireBasicAttack() {
-    if (selectedCharacter === 'aiden') meleeBasicAttack(100, 70, CHARACTERS.aiden.color);
+    if (selectedCharacter === 'aiden') meleeBasicAttack(200, 70, CHARACTERS.aiden.color);
     else if (selectedCharacter === 'celine') projectileBasicAttack(200, CHARACTERS.celine.color);
-    else if (selectedCharacter === 'jackie') meleeBasicAttack(100, 70, CHARACTERS.jackie.color);
+    else if (selectedCharacter === 'jackie') meleeBasicAttack(200, 70, CHARACTERS.jackie.color);
     else if (selectedCharacter === 'aya') projectileBasicAttack(200, CHARACTERS.aya.color);
   }
 
